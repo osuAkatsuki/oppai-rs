@@ -5,6 +5,11 @@ authors = ["Natsu Kagami <natsukagami@gmail.com>"]
 edition = "2018"
 build = "build.rs"
 
+description = "Rust bindings to `oppai-ng`(https://github.com/Francesco149/oppai-ng) with a safe wrapper."
+repository = "https://github.com/natsukagami/oppai-rs"
+readme = "README.md"
+license = "MIT"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
