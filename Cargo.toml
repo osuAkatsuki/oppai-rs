@@ -14,10 +14,10 @@ license = "MIT"
 
 [dependencies]
 libc = "0.2.65"
-bitflags = "1.0"
+bitflags = "1"
 
 [build-dependencies]
-cc = "1.0"
+cc = "1"
 
 [dev-dependencies]
 lazy_static = "1.4.0"
