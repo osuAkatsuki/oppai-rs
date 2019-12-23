@@ -126,9 +126,7 @@ fn run_single_test(score: &score) -> Result<(), Box<dyn std::error::Error>> {
         p
     };
 
-    let map_max_combo = oppai.max_combo();
-
-    let (pp, stars) = oppai.run();
+    let (pp, _) = oppai.run();
 
     let margin = ERROR_MARGIN
         * (score.pp as f32)
@@ -143,7 +141,6 @@ fn run_single_test(score: &score) -> Result<(), Box<dyn std::error::Error>> {
         });
 
     assert!((pp - (score.pp as f32)).abs() < margin);
-
     Ok(())
 }
 

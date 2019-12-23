@@ -40,9 +40,7 @@ use std::{convert::TryInto, ffi::CString, path::Path};
 /// The main oppai struct, which is a thin wrapper that provides safe
 /// API to the linked ezpp_* functions.
 pub struct Oppai {
-    ezpp: *mut ffi::ezpp,
-
-    map_path: CString,
+    map_content: CString,
     map_mode: Mode,
     max_combo: u32,
 
@@ -56,21 +54,24 @@ pub struct Oppai {
 impl Oppai {
     /// Creates a new, empty Oppai from a map.
     pub fn new(path_to_map: &Path) -> Result<Oppai> {
-        Self::load_map(path_to_map)
+        let file = std::fs::read(path_to_map)?;
+        Self::new_from_content(CString::new(file)?)
+    }
+
+    /// Creates a new Oppai from a map's content.
+    pub fn new_from_content(content: impl Into<CString>) -> Result<Oppai> {
+        Self::load_map(content.into())
     }
 
     /// Creates a new oppai and loads a new map into it.
-    fn load_map(path: &Path) -> Result<Oppai> {
+    fn load_map(content: CString) -> Result<Oppai> {
         // Extract the Path into a *const u8
-        let path = path
-            .to_str()
-            .ok_or_else(|| Error::InvalidPath(path.to_path_buf()))?;
-        let path = CString::new(path.as_bytes()).map_err(Error::InvalidPathNull)?;
-
         // Construct a *mut ezpp to collect map data
         let (map_mode, max_combo) = {
             let p = unsafe { ffi::ezpp_new() };
-            OppaiError::resolve(unsafe { ffi::ezpp(p, path.as_ptr()) })?;
+            OppaiError::resolve(unsafe {
+                ffi::ezpp_data(p, content.as_ptr(), content.as_bytes().len() as libc::c_int)
+            })?;
             // Get the map's information
             let x = (
                 unsafe { ffi::ezpp_mode(p) }.try_into()?,
@@ -82,14 +83,10 @@ impl Oppai {
             x
         };
 
-        let new_oppai = unsafe { ffi::ezpp_new() };
-        OppaiError::resolve(unsafe { ffi::ezpp(new_oppai, path.as_ptr()) })?;
-
         Ok(Oppai {
-            ezpp: new_oppai,
-            map_path: path,
-            map_mode: map_mode,
-            max_combo: max_combo,
+            map_content: content,
+            map_mode,
+            max_combo,
 
             combo: None,
             accuracy: None,
@@ -103,8 +100,8 @@ impl Oppai {
         self.mods = Some(mods);
         self
     }
-    fn set_mods(&mut self, mods: Mods) {
-        unsafe { ffi::ezpp_set_mods(self.ezpp, mods.bits()) }
+    fn set_mods(&self, ezpp: *mut ffi::ezpp, mods: Mods) {
+        unsafe { ffi::ezpp_set_mods(ezpp, mods.bits()) }
     }
 
     /// Sets the mode for the play.
@@ -118,12 +115,12 @@ impl Oppai {
         self.mode = Some(mode);
         Ok(self)
     }
-    fn set_mode(&mut self, mode: Mode) {
+    fn set_mode(&self, ezpp: *mut ffi::ezpp, mode: Mode) {
         match self.map_mode {
             Mode::Std => {
                 unsafe {
-                    ffi::ezpp_set_mode_override(self.ezpp, if mode == Mode::Std { 0 } else { 1 });
-                    ffi::ezpp_set_mode(self.ezpp, mode.into());
+                    ffi::ezpp_set_mode_override(ezpp, if mode == Mode::Std { 0 } else { 1 });
+                    ffi::ezpp_set_mode(ezpp, mode.into());
                 };
             }
             _ => (),
@@ -150,14 +147,14 @@ impl Oppai {
         self.combo = Some(combo);
         Ok(self)
     }
-    fn set_combo(&mut self, combo: Combo) {
+    fn set_combo(&self, ezpp: *mut ffi::ezpp, combo: Combo) {
         match combo {
             Combo::FC(slider_ends_missed) => unsafe {
-                ffi::ezpp_set_combo(self.ezpp, (self.max_combo() - slider_ends_missed) as i32)
+                ffi::ezpp_set_combo(ezpp, (self.max_combo() - slider_ends_missed) as i32)
             },
             Combo::NonFC { max_combo, misses } => unsafe {
-                ffi::ezpp_set_combo(self.ezpp, max_combo as i32);
-                ffi::ezpp_set_nmiss(self.ezpp, misses as i32);
+                ffi::ezpp_set_combo(ezpp, max_combo as i32);
+                ffi::ezpp_set_nmiss(ezpp, misses as i32);
             },
         };
     }
@@ -171,44 +168,45 @@ impl Oppai {
             Ok(self)
         }
     }
-    fn set_accuracy(&mut self, accuracy: f32) {
-        unsafe { ffi::ezpp_set_accuracy_percent(self.ezpp, accuracy) }
+    fn set_accuracy(&self, ezpp: *mut ffi::ezpp, accuracy: f32) {
+        unsafe { ffi::ezpp_set_accuracy_percent(ezpp, accuracy) }
     }
 
     /// PP of the play.
-    pub fn pp(self) -> f32 {
+    pub fn pp(&self) -> f32 {
         self.run().0
     }
 
     /// Star difficulty of the play.
-    pub fn stars(self) -> f32 {
+    pub fn stars(&self) -> f32 {
         self.run().1
     }
 
     /// Runs oppai and returns the pp and star difficulty of the play.
-    pub fn run(mut self) -> (f32, f32) {
+    pub fn run(&self) -> (f32, f32) {
+        let ezpp = unsafe { ffi::ezpp_new() };
         if let Some(v) = self.combo {
-            self.set_combo(v)
+            self.set_combo(ezpp, v)
         }
         if let Some(v) = self.mode {
-            self.set_mode(v)
+            self.set_mode(ezpp, v)
         }
         if let Some(v) = self.accuracy {
-            self.set_accuracy(v)
+            self.set_accuracy(ezpp, v)
         }
         if let Some(v) = self.mods {
-            self.set_mods(v)
+            self.set_mods(ezpp, v)
         }
         unsafe {
-            ffi::ezpp(self.ezpp, self.map_path.as_ptr());
-            (ffi::ezpp_pp(self.ezpp), ffi::ezpp_stars(self.ezpp))
+            ffi::ezpp_data(
+                ezpp,
+                self.map_content.as_ptr(),
+                self.map_content.as_bytes().len() as libc::c_int,
+            );
+            let res = (ffi::ezpp_pp(ezpp), ffi::ezpp_stars(ezpp));
+            ffi::ezpp_free(ezpp);
+            res
         }
-    }
-}
-
-impl Drop for Oppai {
-    fn drop(&mut self) {
-        unsafe { ffi::ezpp_free(self.ezpp) }
     }
 }
 

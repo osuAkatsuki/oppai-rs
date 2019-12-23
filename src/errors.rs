@@ -1,4 +1,4 @@
-use std::{error, fmt, path::PathBuf};
+use std::{error, fmt, io, path::PathBuf};
 
 /// The result type.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -14,8 +14,9 @@ pub enum Error {
 
     // From user
     InvalidPath(PathBuf),
-    /// Path contains a \0
-    InvalidPathNull(std::ffi::NulError),
+    ReadError(io::Error),
+    /// Content contains a \0
+    NulError(std::ffi::NulError),
     /// Cannot convert non-standard mode to another mode.
     CannotConvertMode,
     /// max_combo invalid, # of misses invalid
@@ -33,9 +34,21 @@ impl fmt::Display for Error {
 impl error::Error for Error {
     fn cause(&self) -> Option<&dyn error::Error> {
         match self {
-            Error::InvalidPathNull(err) => Some(err),
+            Error::NulError(err) => Some(err),
             _ => None,
         }
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Self {
+        Error::ReadError(e)
+    }
+}
+
+impl From<std::ffi::NulError> for Error {
+    fn from(e: std::ffi::NulError) -> Error {
+        Error::NulError(e)
     }
 }
 

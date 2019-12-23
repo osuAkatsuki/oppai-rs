@@ -12,7 +12,12 @@ extern "C" {
     /// Frees an ezpp struct.
     pub fn ezpp_free(ez: *mut ezpp) -> ();
     /// Load a map.
-    pub fn ezpp(ez: *mut ezpp, map: *const libc::c_char) -> libc::c_int;
+    // pub fn ezpp(ez: *mut ezpp, map: *const libc::c_char) -> libc::c_int;
+    pub fn ezpp_data(
+        ez: *mut ezpp,
+        data: *const libc::c_char,
+        data_size: libc::c_int,
+    ) -> libc::c_int;
     /// Set mods.
     pub fn ezpp_set_mods(ez: *mut ezpp, mods: libc::c_int) -> ();
     /// Get and set mode.
