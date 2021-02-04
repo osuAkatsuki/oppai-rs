@@ -32,6 +32,7 @@ extern "C" {
     pub fn ezpp_set_nmiss(ez: *mut ezpp, nmiss: libc::c_int) -> ();
     /// Set accuracy
     pub fn ezpp_set_accuracy_percent(ez: *mut ezpp, nmiss: libc::c_float) -> ();
+    pub fn ezpp_set_accuracy(ez: *mut ezpp, n100: libc::c_int, n50: libc::c_int) -> ();
 
     /// Get pp.
     pub fn ezpp_pp(ez: *const ezpp) -> libc::c_float;

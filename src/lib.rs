@@ -46,7 +46,7 @@ pub struct Oppai {
 
     // Delay the application because oppai is dumb
     combo: Option<Combo>,
-    accuracy: Option<f32>,
+    accuracy: Option<Accuracy>,
     mode: Option<Mode>,
     mods: Option<Mods>,
 }
@@ -137,7 +137,8 @@ impl Oppai {
         match combo {
             Combo::FC(slider_ends_missed) if slider_ends_missed < self.max_combo() => Ok(()),
             Combo::NonFC { max_combo, misses }
-                if (max_combo as u64) + (misses as u64) <= self.max_combo() as u64 =>
+            // TODO: Be lenient by one here until https://github.com/Francesco149/oppai-ng/issues/71 is resolved
+                if (max_combo as u64) + (misses as u64) <= (self.max_combo() + 3) as u64 =>
             {
                 Ok(())
             }
@@ -160,16 +161,23 @@ impl Oppai {
     }
 
     /// Sets the accuracy.
-    pub fn accuracy(&mut self, accuracy: f32) -> Result<&mut Self> {
-        if accuracy < 0.0 || accuracy > 100.0 {
-            return Err(Error::InvalidAccuracy);
-        } else {
-            self.accuracy = Some(accuracy);
-            Ok(self)
+    pub fn accuracy(&mut self, accuracy: impl Into<Accuracy>) -> Result<&mut Self> {
+        let accuracy = accuracy.into();
+        if let Accuracy::Float(acc) = accuracy {
+            if acc < 0.0 || acc > 100.0 {
+                return Err(Error::InvalidAccuracy);
+            }
         }
+        self.accuracy = Some(accuracy);
+        Ok(self)
     }
-    fn set_accuracy(&self, ezpp: *mut ffi::ezpp, accuracy: f32) {
-        unsafe { ffi::ezpp_set_accuracy_percent(ezpp, accuracy) }
+    fn set_accuracy(&self, ezpp: *mut ffi::ezpp, accuracy: Accuracy) {
+        match accuracy {
+            Accuracy::Float(accuracy) => unsafe { ffi::ezpp_set_accuracy_percent(ezpp, accuracy) },
+            Accuracy::Hits { n100, n50 } => unsafe {
+                ffi::ezpp_set_accuracy(ezpp, n100 as i32, n50 as i32)
+            },
+        }
     }
 
     /// PP of the play.
@@ -225,5 +233,27 @@ impl Combo {
     /// Constructs a non-fc Combo.
     pub fn non_fc(max_combo: u32, misses: u32) -> Combo {
         Combo::NonFC { max_combo, misses }
+    }
+}
+
+/// Represents the accuracy input.
+#[derive(Copy, Clone, Debug)]
+pub enum Accuracy {
+    // As a float between 0 and 100.
+    Float(f32),
+    // As an input of 300s, 100s and 50s
+    Hits { n100: u32, n50: u32 },
+}
+
+impl From<f32> for Accuracy {
+    fn from(u: f32) -> Self {
+        Self::Float(u)
+    }
+}
+
+impl Accuracy {
+    /// Create an Accuracy input from the number of hits.
+    pub fn from_hits(n100: u32, n50: u32) -> Accuracy {
+        Self::Hits { n100, n50 }
     }
 }
