@@ -1,4 +1,5 @@
 /target
-/tests/artifacts
+/tests/artifacts/*
+!/tests/artifacts/.empty
 **/*.rs.bk
 Cargo.lock
