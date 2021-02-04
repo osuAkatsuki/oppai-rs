@@ -98,18 +98,12 @@ lazy_static! {
 fn run_single_test(score: &score) -> Result<(), Box<dyn std::error::Error>> {
     use std::convert::TryInto;
 
-    // println!("{:?}", score);
+    println!("{:?}", score);
     // println!("{}/test_suite/{}.osu", *ARTIFACTS_PATH, score.id);
 
-    let accuracy = if score.mode == 0 {
-        (score.n300 * 6 + score.n100 * 2 + score.n50) as f32
-            / ((score.n300 + score.n100 + score.n50 + score.nmiss) * 6) as f32
-            * 100.0
-    } else {
-        (score.n300 * 2 + score.n100 * 1) as f32
-            / ((score.n300 + score.n100 + score.n50 + score.nmiss) * 2) as f32
-            * 100.0
-    };
+    let accuracy = crate::Accuracy::from_hits(score.n100 as u32, score.n50 as u32);
+
+    let mods = crate::Mods::from_bits(score.mods).ok_or(crate::Error::CannotConvertMode)?;
 
     let oppai = {
         let mut p = crate::Oppai::new(std::path::Path::new(&format!(
@@ -122,7 +116,7 @@ fn run_single_test(score: &score) -> Result<(), Box<dyn std::error::Error>> {
         ))?
         .accuracy(accuracy)?
         .mode(score.mode.try_into()?)?
-        .mods(crate::Mods::from_bits(score.mods).ok_or(crate::Error::CannotConvertMode)?);
+        .mods(mods);
         p
     };
 
@@ -139,6 +133,8 @@ fn run_single_test(score: &score) -> Result<(), Box<dyn std::error::Error>> {
         } else {
             1.0
         });
+
+    println!("[{:?}, {:?}] => {} +-{}", mods, accuracy, pp, margin);
 
     assert!((pp - (score.pp as f32)).abs() < margin);
     Ok(())
