@@ -43,6 +43,7 @@ pub struct Oppai {
     map_content: CString,
     map_mode: Mode,
     max_combo: u32,
+    objects_count: u32,
 
     // Delay the application because oppai is dumb
     combo: Option<Combo>,
@@ -67,7 +68,7 @@ impl Oppai {
     fn load_map(content: CString) -> Result<Oppai> {
         // Extract the Path into a *const u8
         // Construct a *mut ezpp to collect map data
-        let (map_mode, max_combo) = {
+        let (map_mode, max_combo, objects_count) = {
             let p = unsafe { ffi::ezpp_new() };
             OppaiError::resolve(unsafe {
                 ffi::ezpp_data(p, content.as_ptr(), content.as_bytes().len() as libc::c_int)
@@ -76,6 +77,7 @@ impl Oppai {
             let x = (
                 unsafe { ffi::ezpp_mode(p) }.try_into()?,
                 unsafe { ffi::ezpp_max_combo(p) } as u32,
+                unsafe { ffi::ezpp_nobjects(p) } as u32,
             );
             unsafe {
                 ffi::ezpp_free(p);
@@ -87,6 +89,7 @@ impl Oppai {
             map_content: content,
             map_mode,
             max_combo,
+            objects_count,
 
             combo: None,
             accuracy: None,
@@ -178,6 +181,11 @@ impl Oppai {
                 ffi::ezpp_set_accuracy(ezpp, n100 as i32, n50 as i32)
             },
         }
+    }
+
+    /// Returns the number of objects in the beatmap.
+    pub fn num_objects(&self) -> u32 {
+        self.objects_count
     }
 
     /// PP of the play.

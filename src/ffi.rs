@@ -38,4 +38,6 @@ extern "C" {
     pub fn ezpp_pp(ez: *const ezpp) -> libc::c_float;
     /// Get stars.
     pub fn ezpp_stars(ez: *const ezpp) -> libc::c_float;
+    /// Get object count.
+    pub fn ezpp_nobjects(ez: *const ezpp) -> libc::c_int;
 }
