@@ -1,4 +1,4 @@
 [submodule "oppai"]
 	path = oppai
-	url = https://github.com/Francesco149/oppai-ng
-	branch = 3.2.3
+	url = https://github.com/natsukagami/oppai-ng
+	branch = latest-changes

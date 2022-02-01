@@ -53,7 +53,7 @@ fn run_command(mut v: Command) {
 
 // Download artifacts if needed.
 // We use wget for linux (^3^)
-#[cfg(target_os = "linux")]
+#[cfg(target_family = "unix")]
 fn prepare_artifacts() {
     let tests_archive_path: PathBuf = {
         let mut r = ARTIFACTS_PATHBUF.clone();
