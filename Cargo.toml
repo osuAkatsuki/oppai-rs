@@ -1,12 +1,12 @@
 [package]
 name = "oppai-rs"
-version = "0.2.3"
-authors = ["Natsu Kagami <natsukagami@gmail.com>"]
+version = "0.2.4"
+authors = ["Natsu Kagami <natsukagami@gmail.com>", "tsunyoku <tsunyoku@gmail.com>"]
 edition = "2018"
 build = "build.rs"
 
 description = "Rust bindings to `oppai-ng`(https://github.com/Francesco149/oppai-ng) with a safe wrapper."
-repository = "https://github.com/natsukagami/oppai-rs"
+repository = "https://github.com/osuAkatsuki/oppai-rs"
 readme = "README.md"
 license = "MIT"
 
