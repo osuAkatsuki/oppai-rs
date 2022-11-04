@@ -9,5 +9,4 @@ fn main() {
         .file("oppai/oppai.c")
         .define("OPPAI_EXPORT", None)
         .compile("oppai");
-    cc::Build::new().file("tests/test.c").compile("test");
 }
